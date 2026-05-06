@@ -12,6 +12,16 @@
 - ToS notes: <FILL IN — explicit prohibitions, attribution requirements>
 - Decision: <PROCEED / BLOCK / NEEDS LEGAL REVIEW>
 
+## micb.md
+
+- Page: https://micb.md/en/ (homepage; `<section class="exchange-section">` is server-rendered)
+- Fixture captured: 2026-05-06 (HTTP 200, 184872 bytes; WordPress site)
+- Notes: rates inlined in homepage; both cash and card panels in DOM with `data-exchangetab="cash|card"`. Card section has no BNM column.
+- Skim date: <FILL IN BEFORE PUBLISH>
+- robots.txt: <FILL IN — paste relevant rules>
+- ToS notes: <FILL IN — explicit prohibitions, attribution requirements>
+- Decision: <PROCEED / BLOCK / NEEDS LEGAL REVIEW>
+
 ## maib.md
 
 - Page: https://www.maib.md/en/curs-valutar (server-rendered; correct URL — `/en/exchange-rates` is a 404)
