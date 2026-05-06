@@ -1,14 +1,14 @@
 {
     "$schema": "https://apify.com/schemas/v1/actor.ide.json",
     "actorSpecification": 1,
-    "name": "python-start",
-    "title": "Scrape single page in Python",
-    "description": "Scrape data from single page with provided URL.",
-    "version": "0.0",
+    "name": "moldova-bank-rates",
+    "title": "Moldova Bank Exchange Rates",
+    "description": "Live commercial cash and card exchange rates from MAIB, MICB, Victoriabank and the National Bank of Moldova (BNM). One normalized record per bank, currency pair and rate type.",
+    "version": "0.1",
     "buildTag": "latest",
     "meta": {
         "templateId": "python-start",
-        "generatedBy": "<FILL-IN-MODEL>"
+        "generatedBy": "Claude Code with Claude Opus 4.7"
     },
     "input": "./input_schema.json",
     "output": "./output_schema.json",
