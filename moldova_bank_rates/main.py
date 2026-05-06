@@ -7,6 +7,7 @@ from apify import Actor
 from moldova_bank_rates.banks.bnm import BnmFetcher
 from moldova_bank_rates.banks.maib import MaibFetcher
 from moldova_bank_rates.banks.micb import MicbFetcher
+from moldova_bank_rates.banks.victoriabank import VictoriabankFetcher
 from moldova_bank_rates.models import InputConfig
 from moldova_bank_rates.orchestrator import gather_all_rates
 
@@ -14,7 +15,7 @@ ALL_FETCHERS = {
     "bnm": BnmFetcher,
     "maib": MaibFetcher,
     "micb": MicbFetcher,
-    # "victoriabank" is wired in Phase 2 (Task 2.2).
+    "victoriabank": VictoriabankFetcher,
 }
 
 
