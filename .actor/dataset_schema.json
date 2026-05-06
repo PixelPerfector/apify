@@ -1,24 +1,52 @@
 {
     "$schema": "https://apify.com/schemas/v1/dataset.ide.json",
     "actorSpecification": 1,
-    "fields": {},
+    "fields": {
+        "type": "object",
+        "properties": {
+            "pair": {"type": "string"},
+            "base": {"type": "string"},
+            "quote": {"type": "string"},
+            "bank": {"type": "string"},
+            "bank_display_name": {"type": "string"},
+            "rate_type": {"type": "string", "enum": ["cash", "card"]},
+            "buy": {"type": ["number", "null"]},
+            "sell": {"type": ["number", "null"]},
+            "mid": {"type": ["number", "null"]},
+            "spread_pct": {"type": ["number", "null"]},
+            "currency_unit": {"type": "integer"},
+            "timestamp": {"type": "string", "format": "date-time"},
+            "bank_updated_at": {"type": ["string", "null"], "format": "date-time"},
+            "source_url": {"type": "string"},
+            "available": {"type": "boolean"}
+        },
+        "required": [
+            "pair", "base", "quote", "bank", "bank_display_name", "rate_type",
+            "currency_unit", "timestamp", "source_url", "available"
+        ]
+    },
     "views": {
         "overview": {
             "title": "Overview",
             "transformation": {
-                "fields": ["level", "text"]
+                "fields": [
+                    "bank_display_name", "pair", "rate_type",
+                    "buy", "sell", "mid", "spread_pct",
+                    "timestamp", "source_url"
+                ]
             },
             "display": {
                 "component": "table",
                 "properties": {
-                    "level": {
-                        "label": "Level",
-                        "format": "text"
-                    },
-                    "text": {
-                        "label": "Text",
-                        "format": "text"
-                    }
+                    "bank_display_name": {"label": "Bank", "format": "text"},
+                    "pair": {"label": "Pair", "format": "text"},
+                    "rate_type": {"label": "Type", "format": "text"},
+                    "buy": {"label": "Buy", "format": "number"},
+                    "sell": {"label": "Sell", "format": "number"},
+                    "mid": {"label": "Mid", "format": "number"},
+                    "spread_pct": {"label": "Spread %", "format": "number"},
+                    "timestamp": {"label": "Fetched at", "format": "date"},
+                    "source_url": {"label": "Source", "format": "link"}
                 }
             }
         }

@@ -1,11 +1,11 @@
 {
     "$schema": "https://apify.com/schemas/v1/output.ide.json",
     "actorOutputSchemaVersion": 1,
-    "title": "Output schema",
+    "title": "Moldova Bank Exchange Rates — Output",
     "properties": {
-        "results": {
+        "rates": {
             "type": "string",
-            "title": "Results",
+            "title": "Rates dataset",
             "template": "{{links.apiDefaultDatasetUrl}}/items"
         }
     }
