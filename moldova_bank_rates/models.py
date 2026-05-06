@@ -64,3 +64,38 @@ class Rate(BaseModel):
         if self.mid is None or self.mid == 0:
             return None
         return ((self.sell - self.buy) / self.mid) * 100  # type: ignore[operator]
+
+
+from moldova_bank_rates.normalizers import normalize_pair  # noqa: E402
+
+SUPPORTED_BANKS = ("bnm", "maib", "micb", "victoriabank")
+DEFAULT_PAIRS = ("EUR/MDL", "USD/MDL", "RON/MDL", "GBP/MDL", "CHF/MDL")
+DEFAULT_RATE_TYPES = ("cash", "card")
+
+
+class InputConfig(BaseModel):
+    """Validated actor input."""
+
+    banks: list[str] = Field(default_factory=lambda: list(SUPPORTED_BANKS))
+    pairs: list[str] = Field(default_factory=lambda: list(DEFAULT_PAIRS))
+    rate_types: list[RateType] = Field(default_factory=lambda: list(DEFAULT_RATE_TYPES))
+    use_apify_proxy: bool = True
+
+    @field_validator("banks")
+    @classmethod
+    def _check_banks(cls, value: list[str]) -> list[str]:
+        for slug in value:
+            if slug not in SUPPORTED_BANKS:
+                raise ValueError(
+                    f"unknown bank {slug!r}; supported: {SUPPORTED_BANKS}"
+                )
+        return value
+
+    @field_validator("pairs")
+    @classmethod
+    def _normalise_pairs(cls, value: list[str]) -> list[str]:
+        out: list[str] = []
+        for raw in value:
+            base, quote = normalize_pair(raw)
+            out.append(f"{base}/{quote}")
+        return out

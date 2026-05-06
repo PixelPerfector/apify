@@ -59,3 +59,27 @@ def test_rate_marks_unavailable_when_sell_lower_than_buy():
 def test_rate_timestamp_must_be_timezone_aware():
     with pytest.raises(ValidationError):
         Rate(**_base_kwargs(timestamp=datetime(2026, 5, 6, 14, 30)))
+
+
+from moldova_bank_rates.models import InputConfig
+
+
+def test_input_config_defaults_match_context_section_3():
+    config = InputConfig()
+    assert set(config.banks) == {"bnm", "maib", "micb", "victoriabank"}
+    assert "EUR/MDL" in config.pairs
+    assert "USD/MDL" in config.pairs
+    assert set(config.rate_types) == {"cash", "card"}
+
+
+def test_input_config_rejects_unknown_bank():
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        InputConfig(banks=["unknown-bank"])
+
+
+def test_input_config_normalises_pair_strings():
+    config = InputConfig(pairs=["eur-mdl", "USD/MDL", "ronmdl"])
+    assert config.pairs == ["EUR/MDL", "USD/MDL", "RON/MDL"]
