@@ -1,225 +1,268 @@
-Iată tot contextul, cu DoD foarte specifice și întrebările pe care le am încă deschise (marcate cu ❓ și grupate la final).
+# Moldovan Bank Exchange Rates Actor — Definition of Done
+
+This document is the contract for the project. Everything in §5 must be checked off before flipping the actor to Public on Apify Store. §9 is the final gate.
 
 ---
 
-## 1. Contextul de business
+## 1. Business context
 
-**Produsul în două propoziții.** Un actor Apify care, dat fiind o listă de bănci moldovenești și perechi valutare, returnează ratele de schimb curente într-un format JSON normalizat. Diferențiator: rate **de ghișeu/comerciale** ale băncilor specifice (nu rate oficiale generice de la banca centrală), pe o piață (Moldova) unde nu există API agregator existent.
+**Product.** An Apify actor that, given a list of Moldovan banks and currency pairs, returns current exchange rates in a normalized JSON dataset. Differentiator: **commercial/counter rates from specific banks** (not the generic central-bank reference rate), on a market (Moldova) where no aggregator API exists.
 
-**Cui îi vinzi.** Trei personas plauzibile:
+**Buyers (three plausible personas).**
 
-1. **Firme de remitențe / fintech regionale** care arată user-ului "unde schimbi cel mai bine" — au nevoie de date live multi-bank.
-2. **Agenții de turism și platforme de booking** care afișează prețuri în MDL convertite — au nevoie de rate curente (asta e adjacency-ul tău Pandatur).
-3. **Comparatoare de rate / blogeri de finanțe personale** din Moldova/România.
+1. Remittance / regional fintech firms showing users "where to exchange best" — need live multi-bank data.
+2. Travel agencies and booking platforms displaying MDL-converted prices — need current rates (Pandatur adjacency).
+3. Personal-finance comparison sites and bloggers in Moldova/Romania.
 
-**Realitatea pieței.** Volum total de buyeri posibili: probabil 50-200 globally interesați să plătească pentru asta. La $0.002/rate × ~20 rate/run × 4 runs/zi × 30 zile = ~$5/lună per buyer activ. Pentru €300/lună (target tău minim) ai nevoie de ~60 buyeri activi sau câțiva enterprise. Realist, primele 6 luni ești în zona €0-50/lună dacă nu marketizezi activ.
+**Honest market sizing.** Total addressable buyers globally: probably 50–200 willing to pay. Unit economics at the launch price of $0.50/1000 results ($0.0005/record) × ~20 records/run × 4 runs/day × 30 days ≈ **$1.20/month per active buyer**. Reaching €300/month minimum needs ~250 active buyers or a few enterprise contracts at custom pricing — *not realistic in year one* at floor pricing. Re-pricing decision happens at day-60 (§5) if demand signal exists. First 6 months realistically €0–20/month without active marketing.
 
-**De ce e totuși worth shipping.** Cost de mentenanță scăzut (4 selectori HTML), e un proiect demonstrabil în portofoliu, învață platforma Apify end-to-end pe un caz cu mize mici, și template-ul îl poți replica pentru "Romanian Bank Rates", "Ukrainian Bank Rates", "Bulgarian Bank Rates" — fiecare un actor nou cu 80% cod refolosit.
+**Why ship anyway.** Low maintenance cost (4 HTML selectors), demonstrable portfolio piece, end-to-end Apify learning on a low-stakes case, replicable template for "Romanian / Ukrainian / Bulgarian Bank Rates" — each a new actor with ~80% reused code.
 
-❓ **Q1**: ai vreun first customer în minte (chiar ca smoke test gratuit) care ar folosi datele astea? Validation pre-lansare schimbă scope-ul — dacă există o agenție de turism care zice "îmi trebuie", construiești pentru ei specific.
-
----
-
-## 2. Contextul tehnic — decizii și WHY
-
-| Decizie               | Aleasă                         | Alternativa respinsă     | Motivul                                                                         |
-| --------------------- | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------- |
-| Single vs multi-actor | Single, multi-bank             | Per-bancă                | UX buyer + un singur listing de marketat                                        |
-| Limbaj                | Python                         | Node/TypeScript          | Stack-ul tău existent, Apify SDK e mai matur în Python pentru actors data-heavy |
-| HTTP client           | `httpx` async                  | `requests` sync          | 4 bănci în paralel = sub 3s vs 10s+                                             |
-| Parsing               | `selectolax` (lexbor)          | BeautifulSoup            | 10-30x mai rapid, CSS selectors simpli                                          |
-| Browser engine        | Niciunul                       | Playwright/Selenium      | Rate pages sunt server-rendered — costul Playwright nu se justifică             |
-| Validation            | Pydantic v2                    | Dict-uri raw             | Erori clare la HTML schimbat, output schema documentat automat                  |
-| Scraping framework    | Apify SDK direct, fără Crawlee | Crawlee                  | 4 GET-uri pe pagini cunoscute = Crawlee e overkill                              |
-| Proxy                 | Apify Proxy datacenter         | Fără proxy / residential | Inclus gratuit, suficient pentru rate publice                                   |
-
-❓ **Q2**: BNM are date oficial publicate prin XML (un endpoint stabil). Le incluzi ca "bank=bnm" alături de cele 3 bănci comerciale (avantaj: referință oficială pentru spread calculation), sau separi în două actors? Recomand să le incluzi în același actor, simplifică buyer experience.
+**No validated first customer.** Building for the listing, not a specific buyer. Week-1 outreach (§7) is the validation loop. If 30-day gate (§8) shows zero buyers, decide consciously.
 
 ---
 
-## 3. Modelul de output — exact ce returnezi
+## 2. Locked technical decisions
 
-Per fiecare combinație (bancă × pereche), un record în dataset cu aceste câmpuri:
-
-| Câmp                | Tip            | Exemplu                | Notă                                              |
-| ------------------- | -------------- | ---------------------- | ------------------------------------------------- |
-| `pair`              | string         | "EUR/MDL"              | Format standardizat ISO 4217                      |
-| `base`              | string         | "EUR"                  | Valuta de bază                                    |
-| `quote`             | string         | "MDL"                  | Valuta de cotație                                 |
-| `bank`              | string         | "maib"                 | Slug intern, lowercase                            |
-| `bank_display_name` | string         | "Moldova Agroindbank"  | Pentru UI buyer                                   |
-| `buy`               | float \| null  | 19.45                  | Rata la care banca cumpără valuta de bază         |
-| `sell`              | float \| null  | 19.85                  | Rata la care banca vinde valuta de bază           |
-| `mid`               | float \| null  | 19.65                  | Calculat (buy+sell)/2, sau null dacă lipsește una |
-| `spread_pct`        | float \| null  | 2.05                   | Calculat ((sell-buy)/mid)\*100                    |
-| `currency_unit`     | int            | 1                      | Unele bănci cotează la 100 (ex. 100 JPY)          |
-| `timestamp`         | string ISO     | "2026-05-06T14:30:00Z" | Când ai fetch-uit, UTC                            |
-| `bank_updated_at`   | string \| null | "2026-05-06T09:00:00Z" | Dacă banca afișează când a actualizat ea          |
-| `source_url`        | string         | "https://maib.md/..."  | URL-ul exact scrapat                              |
-| `available`         | bool           | true                   | False dacă banca nu cotează acea pereche          |
-
-❓ **Q3**: include `spread_pct` calculat în output, sau lași buyer-ul să-l calculeze? Argumentul pentru include: e principala valoare de business a datelor astea (cine are spread mai mic = unde schimbi mai bine).
-
-❓ **Q4**: unele bănci au rate diferite pentru **cash** vs **card/cont** — diferă cu 0.5-2%. Le tratezi ca două record-uri separate (cu `rate_type: "cash" | "card"`), sau iei doar una (care?), sau pe ambele într-un câmp compus? Recomand: două record-uri, e date mai bogate la cost zero.
+| Decision | Choice | Rejected | Why |
+|---|---|---|---|
+| Single vs multi-actor | Single, multi-bank | Per-bank | Buyer UX, single listing to market |
+| Language | Python | Node/TS | Existing stack; Apify SDK Python is mature for data-heavy actors |
+| HTTP client | `httpx` async | `requests` sync | 4 banks in parallel ≈ <3s vs 10s+ |
+| Parsing | `selectolax` (lexbor) | BeautifulSoup | 10–30× faster, simple CSS selectors |
+| Browser engine | None | Playwright/Selenium | Rate pages are server-rendered |
+| Validation | Pydantic v2 | Raw dicts | Clear errors on HTML drift, auto-documented schema |
+| Scraping framework | Apify SDK direct | Crawlee | 4 known GETs — Crawlee is overkill |
+| Proxy | Apify Proxy datacenter | None / residential | Free with platform, sufficient for public rate pages |
+| BNM (central bank) | Included in same actor | Separate actor | Reference for spread, simpler buyer experience |
+| Cash vs card rates | Two separate records, `rate_type` field | Single combined record | Richer data, zero extra cost |
+| Repo visibility | Public | Private | SEO + trust > selector secrecy |
+| Actor slug | `moldova-bank-rates` | `md-fx-rates`, `moldova-exchange-rates` | Matches buyer search intent ("Moldova", "bank", "rates"); locked at Faza 2, hard to rename post-publish |
+| Actor display name | "Moldova Bank Exchange Rates" | — | Same SEO logic |
 
 ---
 
-## 4. Definition of Done — fiecare fază
+## 3. Scope
 
-### Faza 0: Setup + primul scraper (BNM) — 2-3h
+**In v1.**
+- Banks: BNM (XML), MAIB, MICB, Victoriabank
+- Currency pairs: at minimum EUR/MDL, USD/MDL, RON/MDL, GBP/MDL, CHF/MDL, RUB/MDL, UAH/MDL — actual list per bank availability
+- Rate types: `cash` and `card` where banks publish both; otherwise whichever exists, marked with `rate_type`
+- Output: one record per (bank × pair × rate_type)
 
-DoD:
+**Default input for unattended (6-hour schedule) runs.**
+- Banks: all four (BNM, MAIB, MICB, Victoriabank)
+- Pairs: EUR/MDL, USD/MDL, RON/MDL, GBP/MDL, CHF/MDL
+- Rate types: both `cash` and `card` where the bank publishes both, otherwise whichever exists
+- Expected output: ~30–40 records per scheduled run
 
-- [ ] Repo GitHub creat, primul commit pushed
-- [ ] Apify CLI instalat, autentificat cu token-ul tău
-- [ ] `apify run` local execută fără erori (chiar și cu output gol inițial)
-- [ ] BNM XML fetched cu success (HTTP 200)
-- [ ] Cel puțin 5 perechi din BNM XML parsate corect
-- [ ] Output validat: rulezi `apify run`, deschizi `storage/datasets/default/`, verifici 5 fișiere JSON cu structura din tabelul de mai sus
-- [ ] Sanity check manual: deschizi bnm.md în browser, compari 3 rate cu output-ul tău — match
-- [ ] Logging clar: vezi în consolă "Fetched BNM: 5 pairs in 0.4s"
-- [ ] `git push` realizat, repo are README cu minim numele și 2 fraze descriere
-- [ ] **Hard stop**: dacă la 4h nu ai BNM funcțional, oprește și debug — nu mergi mai departe
-
-### Faza 1: Două bănci comerciale + infra — 3-4h
-
-DoD:
-
-- [ ] Două din {maib, micb, victoriabank} au scrapere funcționale local
-- [ ] Pydantic Rate model rejectează input invalid (ai un test care confirmă)
-- [ ] Normalizer pentru numere: "19,45" → 19.45, "1 945,32" → 1945.32, "19.4500" → 19.45
-- [ ] Normalizer pentru perechi: "EUR/MDL" / "eur-mdl" / "EURMDL" → ("EUR", "MDL")
-- [ ] Sanity check vizual pentru fiecare bancă: 3 rate match cu site-ul în browser
-- [ ] Fixture HTML salvat în `tests/fixtures/` per bancă (ca să poți regenera teste fără rețea)
-- [ ] Cel puțin 3 unit tests pentru normalizer (offline, fără rețea)
-- [ ] Logging: timpul de fetch per bancă vizibil
-- [ ] Erori la o bancă nu doboară celelalte (try/except per bancă, nu per actor)
-- [ ] `git push` cu commit message clar
-
-### Faza 2: Al patrulea scraper + deploy Apify — 2-3h
-
-DoD:
-
-- [ ] Toate 4 bănci funcționale local
-- [ ] `.actor/actor.json` valid (Apify CLI nu dă eroare la `apify push`)
-- [ ] `input_schema.json` deschis în Apify Console afișează UI corect (manual check)
-- [ ] Dockerfile build local cu `docker build .` fără warnings critice
-- [ ] Primul build pe Apify platform finalizat cu success (nu doar pushed — _built_)
-- [ ] Un test run pe Apify produce dataset cu ≥15 records (4 bănci × ~4-5 perechi)
-- [ ] Dataset exportabil ca JSON și CSV din Apify Console (clic verificat)
-- [ ] Total runtime al unui run: <30 secunde
-- [ ] Cost estimat per run vizibil în Run details (compute units)
-- [ ] Run page is shareable — copiezi URL-ul, deschizi în incognito, vezi rezultatul
-
-### Faza 3: Publishing — 2h
-
-DoD:
-
-- [ ] README pe Apify Store are 5 secțiuni: Description, Use cases (3 personas), Input parameters, Output schema with example, FAQ
-- [ ] README include cel puțin 1 use case cu exemplu de cod (cum apelezi actor-ul prin API)
-- [ ] Pricing setat: pay-per-result, preț confirmat de tine
-- [ ] Actor mutat din Private în Public
-- [ ] Actor apare în Apify Store la căutarea "Moldova" sau "exchange rate"
-- [ ] GitHub auto-deploy configurat și verificat: faci un commit minor, vezi build automat pe Apify
-- [ ] Smoke test ca buyer extern: te loghezi cu alt cont (sau cere unui prieten), rulezi actor-ul, verifici că output-ul e identic
-- [ ] Categorii și tags setate pe Apify Store: Business, Finance + tags relevante
-
-### Post-launch (săptămâna 2)
-
-DoD:
-
-- [ ] Schedule self-run la 6h interval (catch HTML breakage early)
-- [ ] Apify monitoring/alerting activ pe failure
-- [ ] Primul user extern (chiar dacă tu îl inviți) a făcut un run
-- [ ] Iterație #1 pe README bazat pe ce ai observat la primul use real
-
-❓ **Q5**: ai un timeline strict pentru postlaunch? Sugerez: dacă în 30 zile de la launch ai 0 revenue și 0 buyeri organici, decizi conștient: (a) marketing push activ, (b) low-maintenance + treci la următorul actor, (c) kill. Fără timeline ferm, riscul de procrastinare-cu-mentenanță e mare.
+**Out of v1 (deferred or never).**
+- Historical rates / time series
+- Alerts on rate change
+- Cross-rate calculation (EUR/USD via MDL)
+- Forward / forecast rates
+- Banks beyond the four listed
 
 ---
 
-## 5. Contextul operațional
+## 4. Output contract
 
-**GitHub repo — public sau privat?**
+Per record (bank × pair × rate_type):
 
-| Public                                     | Privat                                         |
-| ------------------------------------------ | ---------------------------------------------- |
-| SEO bonus pentru Apify listing (link-back) | Cod proprietar protejat                        |
-| "Built in public" ca marketing             | Mai multă libertate la experimente             |
-| Ușor de partajat în portofoliu             | Selectorii nu sunt vizibili pentru competitori |
-| Trust signal pentru buyeri                 | —                                              |
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `pair` | string | "EUR/MDL" | ISO 4217, slash-separated |
+| `base` | string | "EUR" | Base currency |
+| `quote` | string | "MDL" | Quote currency |
+| `bank` | string | "maib" | Internal slug, lowercase |
+| `bank_display_name` | string | "Moldova Agroindbank" | For buyer UI |
+| `rate_type` | string | "cash" / "card" | Card = card / account transfer |
+| `buy` | float \| null | 19.45 | Bank buys base from customer |
+| `sell` | float \| null | 19.85 | Bank sells base to customer |
+| `mid` | float \| null | 19.65 | (buy+sell)/2; null if either missing |
+| `spread_pct` | float \| null | 2.05 | ((sell−buy)/mid)×100 |
+| `currency_unit` | int | 1 | Some banks quote per 100 (e.g. 100 JPY) |
+| `timestamp` | string ISO | "2026-05-06T14:30:00Z" | Fetch time, UTC |
+| `bank_updated_at` | string \| null | "2026-05-06T09:00:00Z" | If bank publishes its own update time |
+| `source_url` | string | "https://maib.md/..." | Exact URL scraped |
+| `available` | bool | true | False if bank does not quote that pair/rate_type |
 
-❓ **Q6**: public sau privat? Recomand **public** la primul actor — selectorii oricum sunt triviali, beneficiul de SEO și trust depășește riscul.
+**Invariants enforced by Pydantic.**
+- `pair == base + "/" + quote`
+- If both `buy` and `sell` present, `sell ≥ buy` (else `available=false` and log warning)
+- `timestamp` always present, UTC ISO 8601
+- Currency codes match ISO 4217
 
-**Mentenanță continuă.** Te aștepți la ~1-2h/lună pe actor, distribuit:
+---
 
-- Selectori care se strică: 30-60 min când se întâmplă (1-2x pe an per bancă)
-- Actualizări dependențe: 30 min/trimestru
-- Suport buyeri (issue-uri, întrebări): variabil
-- Adăugări de bănci/perechi cerute: 1-3h per cerere validă
+## 5. Definition of Done — per phase
 
-❓ **Q7**: ești OK cu commitment-ul ăsta de ~2h/lună indefinit? Dacă nu, modelul de business pivotează spre "publish & forget, accept attrition".
+### Pre-Faza 0 — Long-lead administrative item (start now, runs in parallel)
 
-**Versionare.**
+- [ ] PayPal Business application for Perlog SRL submitted. Lead time post-2025 reforms is still 1–3 weeks; do not block Faza 0 coding on it but do not approach Faza 3 publishing without it resolved.
 
+### Faza 0 — Setup + BNM scraper (2–3h, hard stop at 4h)
+
+- [ ] Repo on GitHub, public, first commit pushed
+- [ ] Apify CLI installed, authenticated with personal token
+- [ ] Apify payout method configured: PayPal Business linked to Perlog SRL (preferred) or wire transfer to Perlog SRL bank account; PayPal personal only as fallback. Note in README which entity owns the actor.
+- [ ] `apify run` executes locally without errors (even with empty output initially)
+- [ ] BNM XML endpoint fetched successfully (HTTP 200)
+- [ ] At least 5 pairs from BNM XML parsed correctly
+- [ ] Manual sanity check: open bnm.md in browser, compare 3 rates with output — match
+- [ ] Output records validate against the §4 schema (Pydantic enforced)
+- [ ] Console logging shows per-source fetch time, e.g. "Fetched BNM: 5 pairs in 0.4s"
+- [ ] README has at minimum a name and 2-sentence description
+- [ ] 30-min ToS skim done for all 4 banks; no explicit prohibition found, or prohibition flagged and decision recorded
+- [ ] **Hard stop:** if BNM is not functional at 4h, halt and debug — no progression
+
+### Faza 1 — Two commercial banks + infra (3–4h)
+
+- [ ] Two of {MAIB, MICB, Victoriabank} have functional local scrapers
+- [ ] Pydantic Rate model rejects invalid input (a test confirms)
+- [ ] Number normalizer handles: "19,45" → 19.45, "1 945,32" → 1945.32, "19.4500" → 19.45
+- [ ] Pair normalizer handles: "EUR/MDL", "eur-mdl", "EURMDL" → ("EUR", "MDL")
+- [ ] Cash and card rates emitted as separate records where banks publish both
+- [ ] HTML fixtures saved under `tests/fixtures/` per bank (regenerate offline tests without network)
+- [ ] At least 3 unit tests on normalizers (offline, no network)
+- [ ] Visual sanity check: 3 rates per bank match the live site
+- [ ] Per-bank error isolation: one bank failing does not crash the actor
+- [ ] Per-bank fetch time visible in logs
+
+### Faza 2 — Fourth scraper + Apify deploy (2–3h)
+
+- [ ] All four banks functional locally
+- [ ] `.actor/actor.json` valid with locked slug `moldova-bank-rates` and display name "Moldova Bank Exchange Rates" (`apify push` produces no error)
+- [ ] `input_schema.json` renders correctly in Apify Console (manual check)
+- [ ] `dataset_schema.json` and `output_schema.json` aligned with §4
+- [ ] `docker build .` clean (no critical warnings)
+- [ ] First Apify platform build completes successfully (built, not just pushed)
+- [ ] One platform run produces ≥15 records (4 banks × ~4 pairs)
+- [ ] Dataset exports as JSON and CSV from Apify Console (clicked, verified)
+- [ ] Total run time: <30 seconds
+- [ ] Per-run compute units / cost visible in Run details
+- [ ] Run page shareable: copy URL, open in incognito, see result
+
+### Faza 3 — Publishing (2h)
+
+- [ ] Apify Store README has 5 sections: Description, Use cases (3 personas from §1), Input parameters, Output schema with example, FAQ
+- [ ] README contains at least one use case with API call example
+- [ ] Pricing set in Apify Console: pay-per-result, **$0.50 per 1000 results** ($0.0005/record)
+- [ ] Categories and tags set: Business, Finance + relevant keyword tags ("Moldova", "exchange rate", "bank rates", "currency", "MDL")
+- [ ] Listing assets uploaded: one banner/hero image (1280×640 or per Apify spec) and at least one screenshot of sample JSON output. Without these the listing looks abandoned.
+- [ ] Disclaimer present in listing description, exact text: *"Exchange rates are scraped from public bank websites and may lag the bank's quoted rate by several minutes. Always verify with the bank before transacting. This actor is not affiliated with, endorsed by, or sponsored by any of the banks listed."*
+- [ ] PayPal Business for Perlog SRL is approved and configured as Apify payout method (or fallback documented if not yet approved)
+- [ ] GitHub auto-deploy configured and verified: a trivial commit triggers a platform build
+- [ ] Schedule configured for self-run every 6 hours (catches HTML drift early)
+- [ ] Apify monitoring/alerting active on run failure
+- [ ] Smoke test as external buyer: log in with a different account (or ask a friend), run actor, verify identical output
+- [ ] Actor flipped from Private to Public
+- [ ] Listing appears in Apify Store search for "Moldova" or "exchange rate"
+
+### Post-launch — Week 1 marketing push (3h budget, concentrated)
+
+- [ ] One Reddit post in r/Moldova or r/Romania (respect community promo rules)
+- [ ] One blog post on Perlog site: "Free API for Moldovan bank exchange rates"
+- [ ] Submission to one public-APIs aggregator list (e.g. github.com/public-apis)
+- [ ] Outreach DM to at least 3 named prospects in the three persona segments
+- [ ] First external user (even a personally invited one) has completed a run
+
+### Post-launch — Day 30 status review (mandatory, calendar-blocked)
+
+Recorded metrics: paying runs, total non-owner runs, unique non-owner users, inbound contacts (Apify issues, emails, GitHub interactions, DMs).
+
+**"Alive" signals — at least one of:**
+- [ ] ≥1 paying run from a non-owner account
+- [ ] ≥10 unique non-owner runs
+- [ ] ≥1 inbound contact
+
+If none of the three are met: the listing is invisible. Decision required between (a) one more concentrated marketing push (~3h), (b) accept invisibility and move to silent maintenance, or (c) kill at day 60. Decision written down here.
+
+- [ ] At least one README iteration based on observed first real use (or, if no real use, based on what's missing in the listing)
+
+### Post-launch — Day 60 kill-or-double-down
+
+Compare month-2 metrics against:
+
+- [ ] **Double down** (scope a second country actor — RO/UA/BG): ≥3 paying buyers **or** ≥€10/month run-rate
+- [ ] **Maintain** (keep alive, no further investment beyond §6 baseline): ≥1 paying buyer **and** ≥30 unique non-owner runs in month 2
+- [ ] **Kill or silent-maintenance** (unlist from Store or leave listed but stop responding to support; repo stays public): below both thresholds
+
+Day-60 is *not* the €300/month target — that needs 6+ months of organic discovery. Day-60 only tests whether any demand signal exists.
+
+---
+
+## 6. Operational readiness
+
+**Maintenance commitment.** ~2h/month indefinite, distributed:
+- Selector breakage: 30–60 min when it happens (1–2× per year per bank)
+- Dependency updates: 30 min/quarter
+- Buyer support (issues, questions): variable
+- Adding banks/pairs on validated request: 1–3h per accepted request
+
+If this commitment is not realistic, kill at the 30-day gate (§5) — do not let it become a zombie project.
+
+**Versioning.**
 - Bug fix → patch (0.1.1)
-- Bancă nouă, output backward-compatible → minor (0.2.0)
-- Schimbare în output schema → major (1.0.0)
-- Înainte de 1.0.0 ești în "beta" public, ai voie la breaking changes mai des
+- New bank, output backward-compatible → minor (0.2.0)
+- Output schema change → major (1.0.0)
+- Pre-1.0.0 = public beta, breaking changes allowed more freely
 
-**Ownership legal.** Sub Perlog Software (IT Park Moldova, 7%) sau personal? Dacă vrei să tratezi venitul ca income corporate, factoring-ul Apify trebuie să meargă către contul Perlog. Apify plătește prin Stripe Connect/PayPal — verifică ce suportă pentru SRL Moldova.
+**Legal posture.** Scraping public bank rate pages is generally legal in EU jurisdictions (public factual data, no copyright). Mitigations:
+- ToS skim done in Faza 0 — only block on explicit prohibition
+- Rate-limit conservative (1 request per 5–10 seconds per bank) by design
+- `robots.txt` respected explicitly (Apify SDK does not by default)
 
-❓ **Q8**: cum colectezi banii? Stripe pe SRL Perlog, Stripe personal, Wise, sau lași Apify să acumuleze și retragi rar? Asta afectează doar cum setezi contul Apify la început, dar e mai ușor de făcut bine de la start decât de migrat după.
+**Payouts.** Apify pays creators via **PayPal** (min $20) or **wire transfer** (min $100) — *not* Stripe (Stripe is Apify's collection side). Default route:
+- **Start: PayPal Business linked to Perlog SRL.** PayPal MD business accounts became practical after the April 2025 government reforms enabling Stripe/PayPal/Revolut for MD businesses. Low threshold means early small payouts actually disburse. IT Park 7% applies because revenue lands in the SRL.
+- **Switch at $100/month run-rate: wire transfer** to Perlog SRL EUR/USD account. Lower fees, cleaner accounting.
+- **Fallback only: PayPal personal.** Income would be personal, IT Park 7% does not apply. Avoid unless SRL PayPal Business cannot be opened.
 
-**Legal/ToS.** Scraping-ul de rate publice afișate pe site-uri bancare e în general legal în UE (e date publice, factuale, neprotejate de copyright). Dar:
-
-- Citești ToS la fiecare bancă — unele interzic explicit acces automat
-- Respect `robots.txt` (Apify SDK nu o face by default — îl adaugi manual)
-- Rate-limit conservator (1 request per 5-10 secunde per bancă) ca să nu pari malițios
-
-❓ **Q9**: ai timp de 30 min să verifici ToS-urile pentru cele 4 bănci? Sau preferi să mergi cu "rate limit conservator + dacă cineva se plânge, adaptez"? Recomandare: skim ToS-urile, dar nu te bloca aici.
-
----
-
-## 6. Marketing și discovery (după publishing)
-
-Apify Store search e principal — buyeri caută "Moldova", "exchange rate", "bank rates", "currency". SEO-ul listing-ului e cel mai important asset de marketing pe care îl ai. Dincolo de Store:
-
-- Cross-listing pe RapidAPI (poate fi același cod prin Apify API gateway)
-- Submission pe Public APIs lists (github.com/public-apis)
-- Post pe r/Moldova, r/Romania, grupuri Facebook fintech locale (atenție la promo policies)
-- Articol blog pe propriul site Perlog: "Free API for Moldovan bank exchange rates"
-
-❓ **Q10**: marketing activ vs pasiv? Pasiv = doar listing-ul Apify, vezi ce vine organic. Activ = ~5-10h în prima lună pe distribution. Dat fiind pattern-ul tău, recomand maxim 3h marketing concentrat în prima săptămână, apoi observation mode.
+**Pricing.** Pay-per-result, **$0.50 per 1000 results** ($0.0005/record) at launch. Rationale: matches the Apify Store floor for established scrapers (Instagram, Twitter at $0.25–$0.50/1k), signals "real data" without distress pricing. Per typical run (~20 records) ≈ $0.01. Per active buyer/month ≈ $2.40 (revise §1 expectations downward accordingly). Re-price upward at day-60 if double-down threshold (§5) is hit.
 
 ---
 
-## 7. Riscuri și ce îți poți da-stuck
+## 7. Marketing plan (passive-leaning)
 
-| Risc                                           | Probabilitate      | Impact | Mitigare                                           |
-| ---------------------------------------------- | ------------------ | ------ | -------------------------------------------------- |
-| Selectori HTML se strică în primele 3 luni     | Mare (60-80%)      | Mediu  | Logging + alerting, fixture tests                  |
-| Bancă blochează Apify Proxy                    | Medie              | Mare   | Test fără proxy întâi, residential proxy ca backup |
-| Zero buyeri în 60 zile                         | Mare (50%+)        | Mediu  | Cost sunk acceptabil dacă faza 0-3 a fost <12h     |
-| Apify schimbă pricing/policies                 | Mică               | Mare   | Cod portabil — putem migra pe RapidAPI             |
-| Tu pierzi interes după 2 săptămâni             | Mare (per pattern) | Total  | Commitment device + decizie conștientă la 30 zile  |
-| Bug în normalizer dă rate greșite (financial!) | Medie              | Mare   | Sanity check vs site real în CI                    |
-| ToS violation triggers cease-and-desist        | Mică               | Mare   | Skim ToS, conservative rate-limit                  |
+3h concentrated budget in week 1 (see §5), then **observation mode**. The Apify Store listing is the primary asset — buyers search "Moldova", "exchange rate", "bank rates", "currency". Listing SEO is the long-term lever.
+
+Available channels beyond the Store, ranked by expected return:
+1. Cross-list on RapidAPI (same code via Apify API gateway)
+2. github.com/public-apis submission
+3. r/Moldova, r/Romania post (one-time, respectful of promo policies)
+4. Perlog blog article
+5. Local fintech Facebook groups (last; lowest signal)
 
 ---
 
-## 8. Sumar întrebări deschise
+## 8. Risk register
 
-| #   | Întrebare                                          | Decizie blocantă pentru                    |
-| --- | -------------------------------------------------- | ------------------------------------------ |
-| Q1  | First customer/use case validat?                   | Schimbă scope-ul de la generic la specific |
-| Q2  | BNM inclus în același actor?                       | Faza 0 (recomand: da)                      |
-| Q3  | `spread_pct` calculat în output?                   | Faza 0 (recomand: da)                      |
-| Q4  | Cash vs card rates separat?                        | Faza 0 (recomand: două record-uri)         |
-| Q5  | Timeline strict postlaunch?                        | Disciplină generală                        |
-| Q6  | Repo public sau privat?                            | Faza 0 (recomand: public)                  |
-| Q7  | OK cu ~2h/lună mentenanță indefinit?               | Decizie de a publica vs a face throwaway   |
-| Q8  | Cum colectezi plățile (Stripe Perlog vs personal)? | Setup cont Apify, before publishing        |
-| Q9  | Verifici ToS-urile băncilor?                       | Înainte de publishing public               |
-| Q10 | Marketing activ sau pasiv?                         | După publishing                            |
+| Risk | Probability | Impact | Mitigation |
+|---|---|---|---|
+| Selectors break in first 3 months | High (60–80%) | Medium | Logging + alerting, fixture tests, 6h schedule catches it |
+| A bank blocks Apify Proxy | Medium | High | Test without proxy first; residential proxy as backup |
+| Zero buyers in 60 days | High (≥50%) | Medium | Acceptable sunk cost if Faza 0–3 stays ≤12h; 30/60-day gates |
+| Apify changes pricing/policy | Low | High | Code is portable — RapidAPI as escape hatch |
+| Interest dies after 2 weeks (per pattern) | High | Total | 30-day gate is the commitment device |
+| Normalizer bug produces wrong rates (financial!) | Medium | High | Sanity check vs live site in CI; visible disclaimer in README |
+| ToS violation triggers cease-and-desist | Low | High | Skim done, conservative rate-limit, respond fast if contacted |
 
-Răspunde la cele care contează pentru tine acum (Q2, Q3, Q4 sunt cele care îți blochează scrierea codului — restul pot aștepta sau pot fi decise pe parcurs).
+---
+
+## 9. Final pre-publish gate
+
+The actor goes Public only when **all** of the following are true. No exceptions, no "fix-it-after".
+
+- [ ] Every box in §5 Faza 0–3 is checked
+- [ ] Output validates against §4 schema for every record produced in the latest platform run
+- [ ] Cost per run is known and documented in the listing
+- [ ] README has all 5 sections, including at least one runnable API example
+- [ ] Pricing model decided and set
+- [ ] GitHub auto-deploy verified end-to-end with a real test commit
+- [ ] 6-hour schedule is live and has produced at least 4 successful runs in a row
+- [ ] Smoke test from external account (different from owner) succeeded
+- [ ] Disclaimer in listing matches the exact text specified in Faza 3
+- [ ] Day-30 calendar event blocked for status review
+- [ ] Day-60 calendar event blocked for kill-or-double-down decision
+
+If any box is unchecked, the actor stays Private. The cost of shipping an embarrassing or broken financial-data actor is much higher than the cost of one extra day of polish.
