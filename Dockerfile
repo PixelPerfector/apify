@@ -26,7 +26,7 @@ RUN echo "Python version:" \
 COPY --chown=myuser:myuser . ./
 
 # Use compileall to ensure the runnability of the Actor Python code.
-RUN python -m compileall -q my_actor/
+RUN python -m compileall -q moldova_bank_rates/
 
 # Specify how to launch the source code of your Actor.
-CMD ["python", "-m", "my_actor"]
+CMD ["python", "-m", "moldova_bank_rates"]
