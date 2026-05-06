@@ -22,6 +22,16 @@
 - ToS notes: <FILL IN — explicit prohibitions, attribution requirements>
 - Decision: <PROCEED / BLOCK / NEEDS LEGAL REVIEW>
 
+## victoriabank.md
+
+- Page: https://www.victoriabank.md/curs-valutar (server-rendered)
+- Fixture captured: 2026-05-06 (HTTP 200, 133420 bytes; tabs `#numerar` and `#carduri`)
+- Notes: rate widget uses `<div class="vb-table">` with `.tr/.td/.th` divs (not real `<table>`).
+- Skim date: <FILL IN BEFORE PUBLISH>
+- robots.txt: <FILL IN — paste relevant rules>
+- ToS notes: <FILL IN — explicit prohibitions, attribution requirements>
+- Decision: <PROCEED / BLOCK / NEEDS LEGAL REVIEW>
+
 ## maib.md
 
 - Page: https://www.maib.md/en/curs-valutar (server-rendered; correct URL — `/en/exchange-rates` is a 404)
