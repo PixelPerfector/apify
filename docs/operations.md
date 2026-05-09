@@ -130,6 +130,6 @@ After the above, ask the controller agent to walk the §9 final gate and flip th
 | 6h schedule produced ≥4 successful runs in a row | ✅ 18 in a row |
 | Smoke test from external account | ⏳ Apify's daily auto-test will exercise this; user-side friend test still recommended |
 | Disclaimer text matches §3 Faza 3 exactly | ✅ in README |
-| Day-30 calendar event blocked | ⏳ `.ics` file ready in `docs/calendar/`, user to import |
-| Day-60 calendar event blocked | ⏳ same |
+| Day-30 calendar event blocked | ✅ created in user's Google Calendar 2026-06-08 (event id `8pj0ecc8usp4rr3klh0aec0ddo`) |
+| Day-60 calendar event blocked | ✅ created in user's Google Calendar 2026-07-08 (event id `rrd16hpo407eq37a16n29u0ulc`) |
 
