@@ -1,0 +1,24 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Perlog SRL//Moldova Bank Rates//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:moldova-bank-rates-day60-decision@perlog.md
+DTSTAMP:20260506T200000Z
+DTSTART;VALUE=DATE:20260706
+DTEND;VALUE=DATE:20260707
+SUMMARY:Moldova Bank Rates — Day-60 kill / maintain / double-down
+DESCRIPTION:Per CONTEXT.md §5 "Post-launch — Day 60 kill-or-double-down".\n\nCompare month-2 metrics against:\n  - Double down (scope a 2nd country actor — RO/UA/BG): ≥3 paying buyers OR ≥€10/month run-rate\n  - Maintain (no further investment beyond §6 baseline): ≥1 paying buyer AND ≥30 unique non-owner runs in month 2\n  - Kill or silent-maintenance: below both thresholds\n\nDay-60 is NOT the €300/month target — that needs 6+ months of organic discovery. Day-60 only tests whether any demand signal exists.\n\nWrite the decision in docs/operations.md and act on it the same week.\n\nNOTE: this date is set to 60 days after 2026-05-06 (plan creation date). If the actor was flipped Public on a different day\, move this event to (publish_date + 60 days).
+LOCATION:https://console.apify.com/actors/Spmkpmmwi0bg18Fwh
+URL:https://console.apify.com/actors/Spmkpmmwi0bg18Fwh
+PRIORITY:5
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+BEGIN:VALARM
+TRIGGER:-PT24H
+ACTION:DISPLAY
+DESCRIPTION:Day-60 decision tomorrow for Moldova Bank Rates actor
+END:VALARM
+END:VEVENT
+END:VCALENDAR

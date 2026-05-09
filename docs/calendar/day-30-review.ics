@@ -1,0 +1,24 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Perlog SRL//Moldova Bank Rates//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:moldova-bank-rates-day30-review@perlog.md
+DTSTAMP:20260506T200000Z
+DTSTART;VALUE=DATE:20260606
+DTEND;VALUE=DATE:20260607
+SUMMARY:Moldova Bank Rates — Day-30 status review
+DESCRIPTION:Per CONTEXT.md §5 "Post-launch — Day 30 status review".\n\nRecord metrics: paying runs\, total non-owner runs\, unique non-owner users\, inbound contacts (Apify issues\, emails\, GitHub interactions\, DMs).\n\n"Alive" signals — at least one of:\n  - ≥1 paying run from a non-owner account\n  - ≥10 unique non-owner runs\n  - ≥1 inbound contact\n\nIf none met\, decide between:\n  (a) one more concentrated marketing push (~3h)\n  (b) accept invisibility and move to silent maintenance\n  (c) kill at day 60\n\nWrite the decision in docs/operations.md.\n\nNOTE: this date is set to 30 days after 2026-05-06 (plan creation date). If the actor was flipped Public on a different day\, move this event to (publish_date + 30 days).
+LOCATION:https://console.apify.com/actors/Spmkpmmwi0bg18Fwh
+URL:https://console.apify.com/actors/Spmkpmmwi0bg18Fwh
+PRIORITY:5
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+BEGIN:VALARM
+TRIGGER:-PT24H
+ACTION:DISPLAY
+DESCRIPTION:Day-30 review tomorrow for Moldova Bank Rates actor
+END:VALARM
+END:VEVENT
+END:VCALENDAR
