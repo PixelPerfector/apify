@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 import httpx
 import pytest
@@ -67,7 +68,7 @@ async def test_filters_by_pair_and_rate_type():
         source_url = "https://example.com/noisy"
 
         async def fetch(self, client: httpx.AsyncClient) -> list[Rate]:
-            common = dict(
+            common: dict[str, Any] = dict(
                 bank="noisy",
                 bank_display_name="Noisy Bank",
                 currency_unit=1,

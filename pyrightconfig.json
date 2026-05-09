@@ -1,0 +1,7 @@
+{
+    "venvPath": ".",
+    "venv": ".venv",
+    "pythonVersion": "3.14",
+    "include": ["moldova_bank_rates", "tests"],
+    "exclude": ["**/__pycache__", ".venv", "storage"]
+}

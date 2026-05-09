@@ -7,7 +7,7 @@ from datetime import datetime
 import httpx
 from selectolax.lexbor import LexborHTMLParser, LexborNode
 
-from moldova_bank_rates.models import Rate
+from moldova_bank_rates.models import Rate, RateType
 from moldova_bank_rates.normalizers import normalize_number
 
 SLUG = "micb"
@@ -15,12 +15,13 @@ DISPLAY_NAME = "Moldova-Investiții-Comerțiale Bank (MICB)"
 SOURCE_URL = "https://micb.md/en/"
 
 _TRAILING_CODE = re.compile(r"[A-Z]{3}$")
+_TABS: tuple[RateType, ...] = ("cash", "card")
 
 
 def parse_micb(html: bytes, fetched_at: datetime) -> list[Rate]:
     tree = LexborHTMLParser(html)
     rates: list[Rate] = []
-    for tab in ("cash", "card"):
+    for tab in _TABS:
         panel = tree.css_first(f'div[data-exchangetab="{tab}"]')
         if panel is None:
             continue
@@ -29,7 +30,7 @@ def parse_micb(html: bytes, fetched_at: datetime) -> list[Rate]:
 
 
 def _parse_panel(
-    panel: LexborNode, *, rate_type: str, fetched_at: datetime
+    panel: LexborNode, *, rate_type: RateType, fetched_at: datetime
 ) -> list[Rate]:
     table = panel.css_first(".exchange-table")
     if table is None:

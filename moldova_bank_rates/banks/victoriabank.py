@@ -6,7 +6,7 @@ from datetime import datetime
 import httpx
 from selectolax.lexbor import LexborHTMLParser, LexborNode
 
-from moldova_bank_rates.models import Rate
+from moldova_bank_rates.models import Rate, RateType
 from moldova_bank_rates.normalizers import normalize_number
 
 SLUG = "victoriabank"
@@ -14,7 +14,7 @@ DISPLAY_NAME = "Victoriabank"
 SOURCE_URL = "https://www.victoriabank.md/curs-valutar"
 
 # (panel id in source -> rate_type emitted)
-_PANELS: tuple[tuple[str, str], ...] = (
+_PANELS: tuple[tuple[str, RateType], ...] = (
     ("numerar", "cash"),
     ("carduri", "card"),
 )
@@ -32,7 +32,7 @@ def parse_victoriabank(html: bytes, fetched_at: datetime) -> list[Rate]:
 
 
 def _parse_panel(
-    panel: LexborNode, *, rate_type: str, fetched_at: datetime
+    panel: LexborNode, *, rate_type: RateType, fetched_at: datetime
 ) -> list[Rate]:
     out: list[Rate] = []
     for row in panel.css(".vb-table .tr"):

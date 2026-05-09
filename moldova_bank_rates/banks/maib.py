@@ -6,7 +6,7 @@ from datetime import datetime
 import httpx
 from selectolax.lexbor import LexborHTMLParser, LexborNode
 
-from moldova_bank_rates.models import Rate
+from moldova_bank_rates.models import Rate, RateType
 from moldova_bank_rates.normalizers import normalize_number
 
 SLUG = "maib"
@@ -15,7 +15,7 @@ SOURCE_URL = "https://www.maib.md/en/curs-valutar"
 
 # Map (container id in the source HTML) -> (rate_type emitted, columns).
 # Only branch-cash and card; customs-agency variants are out of scope for v1.
-_SECTIONS: tuple[tuple[str, str], ...] = (
+_SECTIONS: tuple[tuple[str, RateType], ...] = (
     ("one-one-new", "cash"),
     ("two-new", "card"),
 )
@@ -39,7 +39,7 @@ def parse_maib(html: bytes, fetched_at: datetime) -> list[Rate]:
 
 
 def _parse_row(
-    row: LexborNode, *, rate_type: str, fetched_at: datetime
+    row: LexborNode, *, rate_type: RateType, fetched_at: datetime
 ) -> Rate | None:
     cells = [c.text(strip=True) for c in row.css("td")]
     if len(cells) < 3:

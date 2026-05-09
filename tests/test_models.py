@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -9,8 +10,8 @@ from pydantic import ValidationError
 from moldova_bank_rates.models import Rate
 
 
-def _base_kwargs(**overrides):
-    kwargs = dict(
+def _base_kwargs(**overrides: Any) -> dict[str, Any]:
+    kwargs: dict[str, Any] = dict(
         pair="EUR/MDL",
         base="EUR",
         quote="MDL",
