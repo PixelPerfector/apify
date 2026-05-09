@@ -34,13 +34,26 @@
 - Created: 2026-05-06 (next fire: 2026-05-07T00:00:00Z)
 - API: `apify api /v2/schedules/vupWSQY2Ungbf5nod`
 
-## Pricing (Task 3.4 — pending Console)
+## Pricing (Task 3.4 — set 2026-05-09)
 
-Set via Apify Console **Publication** tab when submitting for store review:
-- Model: pay-per-result
-- $0.50 per 1000 results ($0.0005 / unit, unit = "result")
+**Configured live in the Console wizard. Strategic deviation from CONTEXT.md §6.**
 
-The REST API rejects setting `pricingInfos` directly on a Private actor (Apify routes paid pricing through the Publication review flow).
+Plan called for $0.50 per 1000 results ($0.0005/record). User overrode at the wizard step with explicit instruction "I want this actor to be as cheap as possible". New pricing:
+
+| Event | Per event | Per 1 000 |
+|---|---|---|
+| `apify-default-dataset-item` (Result, primary) | $0.00001 | **$0.01** |
+| `apify-actor-start` (Actor start, infrequent — first 5 s waived) | $0.00005 | $0.05 |
+
+Both are Apify's prefilled minimums. Pricing model: **Pay per event** (PPE — replaces the deprecated Pay-per-Result). Platform usage included free in the per-event price (buyers see one number).
+
+Per typical 27-record run: 1 × $0.00005 + 27 × $0.00001 = **$0.00032**. A 6 h-schedule subscriber ≈ **$0.04/month**. CONTEXT.md §1 sizing was based on $0.0005/record → revise downward 50×: realistic per-buyer ARR is now ~$0.50/year, not $1.20/month.
+
+Trade-off: maximizes adoption / Store discoverability over revenue. Fits the "no validated first customer" position. Re-priceable later (Apify allows pricing edits with a 14-day notice on Public actors).
+
+The REST API rejects setting `pricingInfos` directly; pricing must go through the Console wizard, which gates on:
+1. Billing details + Payment method on Subscription tab
+2. **Identity verification** (KYC) — done automatically by Apify after Billing setup; took ~5 min for this account, notification "Your identity verification has been approved" lifted the gate.
 
 ## Categories & SEO (set via API 2026-05-09)
 
