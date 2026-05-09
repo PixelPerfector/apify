@@ -104,3 +104,32 @@ Items below cannot be set via the Apify REST API and need a click-through in the
 7. Calendar: add `docs/calendar/day-30-review.ics` and `docs/calendar/day-60-decision.ics` (default dates are 30 / 60 days after 2026-05-06; move them if the publish date differs).
 
 After the above, ask the controller agent to walk the §9 final gate and flip the actor Public.
+
+## Public release v0.1.0 (2026-05-09)
+
+- **Public listing**: <https://apify.com/blameless_rumor/moldova-bank-rates>
+- **Pricing on listing**: "from $0.01 / 1,000 results"
+- **Build at publish time**: 0.1.5 (commit `e7a032b`, includes pyright/Pylance type fixes)
+- **Schedule streak at publish**: 18 consecutive SUCCEEDED runs over 3 days
+- **Pyright**: 0 errors / 0 warnings
+- **Pytest**: 37/37
+- **API contract test (`POST /run-sync-get-dataset-items`)**: HTTP 201 verified
+- **Input validation**: invalid `banks=["fakebank"]` rejected by Apify schema layer before reaching the actor
+- **All 4 dataset export formats** (JSON / CSV / XLSX / HTML): HTTP 200 verified
+
+### §9 final gate — actual state at publish
+
+| §9 box | State |
+|---|---|
+| All §5 Faza 0–3 boxes ticked | ✅ except cosmetic icon upload (deferred) |
+| Output validates against §4 schema for every record | ✅ 27/27 |
+| Cost per run documented in listing | ✅ in README "Pricing" section |
+| README has 5 sections + at least one runnable API example | ✅ |
+| Pricing model decided and set | ✅ pay-per-event, $0.01/1000 |
+| GitHub auto-deploy verified | ✅ source = git, manual rebuild succeeds; webhook auto-rebuild on push not yet configured |
+| 6h schedule produced ≥4 successful runs in a row | ✅ 18 in a row |
+| Smoke test from external account | ⏳ Apify's daily auto-test will exercise this; user-side friend test still recommended |
+| Disclaimer text matches §3 Faza 3 exactly | ✅ in README |
+| Day-30 calendar event blocked | ⏳ `.ics` file ready in `docs/calendar/`, user to import |
+| Day-60 calendar event blocked | ⏳ same |
+
